@@ -81,9 +81,9 @@ export async function POST(req: Request) {
       "Accept": "application/json"
     };
 
-    // 3. Crear Locación en GHL
+    // 3. Crear Locación en GHL con Logo incluido
     console.log("Creando Location en GHL...");
-    const locationPayload = {
+    const locationPayload: any = {
       companyId: GHL_COMPANY_ID,
       name: nombreCuenta,
       phone: telefono,
@@ -91,6 +91,10 @@ export async function POST(req: Request) {
       website: dominio,
       country: pais,
     };
+
+    if (logoUrl) {
+      locationPayload.logoUrl = logoUrl;
+    }
 
     const locRes = await fetch("https://services.leadconnectorhq.com/locations/", {
       method: "POST",
@@ -135,25 +139,6 @@ export async function POST(req: Request) {
       const errText = await userRes.text();
       console.error("GHL User Error:", errText);
       // No cortamos el flujo aquí, pero logueamos el error
-    }
-
-    // 5. Actualizar Location con el Logo de Cloudinary
-    if (logoUrl) {
-      console.log(`Actualizando logo en Location ${locationId}...`);
-      const updatePayload = {
-        logoUrl: logoUrl
-      };
-
-      const updateRes = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}`, {
-        method: "PUT",
-        headers: ghlHeaders,
-        body: JSON.stringify(updatePayload)
-      });
-
-      if (!updateRes.ok) {
-        const errText = await updateRes.text();
-        console.error("GHL Update Location Logo Error:", errText);
-      }
     }
 
     // 6. Activar Modo SaaS si el parámetro de plan existe y es válido

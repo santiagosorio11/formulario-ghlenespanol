@@ -133,8 +133,22 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
           </select>
         </div>
 
-        {/* El plan se inyecta desde la URL y no lo elige el usuario para evitar trampas */}
-        <input type="hidden" name="plan" value={planQuery} />
+        {planQuery ? (
+          <input type="hidden" name="plan" value={planQuery} />
+        ) : (
+          <div>
+            <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Tipo de Cuenta *</label>
+            <select name="plan" required className="glass-input" style={{ appearance: "auto" }} defaultValue="">
+              <option value="" disabled>Elige el plan a crear</option>
+              <option value="pro-monthly">GHL Pro x 30 dias</option>
+              <option value="pro-yearly">GHL Pro Anual</option>
+              <option value="premium-monthly">GHL Premium x 30 dias</option>
+              <option value="premium-yearly">GHL Premium Anual</option>
+              <option value="partners-monthly">GHL Partners x 30 dias</option>
+              <option value="partners-yearly">GHL Partners Anual</option>
+            </select>
+          </div>
+        )}
 
         <div>
           <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.5rem", color: "#333", fontWeight: 500 }}>¿Quieres administrar esta cuenta GHL Premium? *</label>
