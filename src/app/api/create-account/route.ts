@@ -34,7 +34,8 @@ export async function POST(req: Request) {
       GHL_BEARER_TOKEN,
       GHL_COMPANY_ID,
       CLOUDINARY_CLOUD_NAME,
-      CLOUDINARY_UPLOAD_PRESET
+      CLOUDINARY_UPLOAD_PRESET,
+      STRIPE_ACCOUNT_ID
     } = process.env;
 
     if (!GHL_BEARER_TOKEN || !GHL_COMPANY_ID) {
@@ -158,7 +159,7 @@ export async function POST(req: Request) {
       console.log(`Activando modo SaaS para Location ${locationId} con el plan ${planParam}...`);
       const saasConfig = saasPlanMap[planParam];
       const saasPayload = {
-        stripeAccountId: "acct_1TNZ7KRn4XfPkgW4",
+        stripeAccountId: STRIPE_ACCOUNT_ID || "acct_1TNZ7KRn4XfPkgW4",
         name: `${nombre} ${apellidos}`,
         email: email,
         companyId: GHL_COMPANY_ID,
