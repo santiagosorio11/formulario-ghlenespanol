@@ -1,66 +1,51 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useState } from "react";
+import AccountFormStep from "@/components/AccountFormStep";
+import { CheckCircle2 } from "lucide-react";
 
 export default function Home() {
+  const [step, setStep] = useState<1 | 2>(1);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{ minHeight: "100vh", padding: "3rem 1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      
+      {/* Cabecera general */}
+      <header style={{ textAlign: "center", marginBottom: "3rem", maxWidth: "600px" }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#1d4ed8", marginBottom: "1rem" }}>
+          Bienvenido a Multimarca GHL
+        </h1>
+        <p style={{ color: "#475569", fontSize: "1.1rem" }}>
+          Completa el proceso para configurar tu cuenta y obtener acceso a todas las herramientas de automatización.
+        </p>
+      </header>
+
+      {/* Stepper Visual */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginBottom: "3rem", width: "100%", maxWidth: "300px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", opacity: step >= 1 ? 1 : 0.5 }}>
+          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: step >= 1 ? "var(--primary)" : "var(--card-bg)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>1</div>
+          <span style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>Cuenta</span>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div style={{ flex: 1, height: "2px", background: step >= 2 ? "var(--success)" : "var(--card-border)" }}></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", opacity: step >= 2 ? 1 : 0.5 }}>
+          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: step >= 2 ? "var(--success)" : "var(--card-bg)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>2</div>
+          <span style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>Listo</span>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* Contenido Dinámico */}
+      <div style={{ width: "100%" }}>
+        {step === 1 && <AccountFormStep onSuccess={() => setStep(2)} />}
+        {step === 2 && (
+          <div className="glass-panel animate-in" style={{ padding: "3rem", textAlign: "center", maxWidth: "500px", margin: "0 auto", backgroundColor: "#fff" }}>
+            <CheckCircle2 size={64} color="var(--success)" style={{ margin: "0 auto 1.5rem" }} />
+            <h2 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1rem", color: "#333" }}>¡Cuenta Creada!</h2>
+            <p style={{ color: "#64748b", marginBottom: "2rem" }}>Tu subcuenta de GHL ha sido creada exitosamente. Recibirás un correo electrónico con tus credenciales de acceso en breves minutos.</p>
+            <button className="glass-button" style={{ backgroundColor: "#1d4ed8" }} onClick={() => window.location.reload()}>Finalizar</button>
+          </div>
+        )}
+      </div>
+
+    </main>
   );
 }
