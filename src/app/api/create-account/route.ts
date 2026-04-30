@@ -13,6 +13,18 @@ export async function POST(req: Request) {
     const dominio = formData.get("dominio") as string;
     const pais = formData.get("pais") as string;
     const logoFile = formData.get("logo") as File;
+    const planParam = formData.get("plan") as string; // Recibe el plan
+
+    const saasPlanMap: Record<string, { planId: string; priceId: string }> = {
+      "pro-monthly": { planId: "69ebd2ddce2b6c16ca2aae61", priceId: "price_1TPqMjRn4XfPkgW4Ol2g3iz0" },
+      "pro-yearly": { planId: "69ebd2ddce2b6c16ca2aae61", priceId: "price_1TPqMjRn4XfPkgW4MUQ791Ja" },
+      "premium-monthly": { planId: "69ebd5a0ca9286b32af91933", priceId: "price_1TPqY7Rn4XfPkgW4RLeyA6Dk" },
+      "premium-yearly": { planId: "69ebd5a0ca9286b32af91933", priceId: "price_1TPqY7Rn4XfPkgW4at1O15ab" },
+      "partners-monthly": { planId: "69ebd74e9a3f0e9063905d55", priceId: "price_1TPqf4Rn4XfPkgW4YGBruwXr" },
+      "partners-yearly": { planId: "69ebd74e9a3f0e9063905d55", priceId: "price_1TPqf4Rn4XfPkgW4pEWGRTLU" },
+      "promo-monthly": { planId: "69ebd8ba959a6fd1966b354a", priceId: "price_1TPqkvRn4XfPkgW4t44gMBQr" },
+      "promo-yearly": { planId: "69ebd8ba959a6fd1966b354a", priceId: "price_1TPqkvRn4XfPkgW4dl9hBQq3" }
+    };
 
     if (!nombre || !email || !nombreCuenta || !logoFile) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
@@ -138,6 +150,35 @@ export async function POST(req: Request) {
       if (!updateRes.ok) {
         const errText = await updateRes.text();
         console.error("GHL Update Location Logo Error:", errText);
+      }
+    }
+
+    // 6. Activar Modo SaaS si el parámetro de plan existe y es válido
+    if (planParam && saasPlanMap[planParam]) {
+      console.log(`Activando modo SaaS para Location ${locationId} con el plan ${planParam}...`);
+      const saasConfig = saasPlanMap[planParam];
+      const saasPayload = {
+        stripeAccountId: "acct_1TNZ7KRn4XfPkgW4",
+        name: `${nombre} ${apellidos}`,
+        email: email,
+        companyId: GHL_COMPANY_ID,
+        isSaaSV2: true,
+        providerLocationId: locationId,
+        saasPlanId: saasConfig.planId,
+        priceId: saasConfig.priceId
+      };
+
+      const saasRes = await fetch(`https://services.leadconnectorhq.com/saas/enable-saas/${locationId}`, {
+        method: "POST",
+        headers: ghlHeaders,
+        body: JSON.stringify(saasPayload)
+      });
+
+      if (!saasRes.ok) {
+        const errText = await saasRes.text();
+        console.error("GHL SaaS Enable Error:", errText);
+      } else {
+        console.log(`SaaS activado exitosamente para la location ${locationId}`);
       }
     }
 

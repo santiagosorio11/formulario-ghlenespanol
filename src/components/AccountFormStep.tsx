@@ -1,7 +1,7 @@
 "use client";
 
 import { UploadCloud, CheckCircle, Loader2 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import PhoneInput from "react-phone-number-input";
 
 interface AccountFormStepProps {
@@ -13,8 +13,16 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
   const [errorMsg, setErrorMsg] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | undefined>("");
+  const [planQuery, setPlanQuery] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setPlanQuery(params.get("plan") || "");
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,15 +127,8 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
           </select>
         </div>
 
-        <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Tipo de Cuenta *</label>
-          <select name="tipo_de_cuenta" required className="glass-input" style={{ appearance: "auto" }} defaultValue="">
-            <option value="" disabled>Tipo de Cuenta GHL</option>
-            <option value="GHL Pro x 30 dias">GHL Pro x 30 dias</option>
-            <option value="GHL Premium x 12 meses">GHL Premium x 12 meses</option>
-            <option value="GHL Partners x 12 meses">GHL Partners x 12 meses</option>
-          </select>
-        </div>
+        {/* El plan se inyecta desde la URL y no lo elige el usuario para evitar trampas */}
+        <input type="hidden" name="plan" value={planQuery} />
 
         <div>
           <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.5rem", color: "#333", fontWeight: 500 }}>¿Quieres administrar esta cuenta GHL Premium? *</label>
