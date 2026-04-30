@@ -41,7 +41,7 @@ export default function Home() {
             <CheckCircle2 size={64} color="var(--success)" style={{ margin: "0 auto 1.5rem" }} />
             <h2 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1rem", color: "#333" }}>¡Cuenta Creada!</h2>
             <p style={{ color: "#64748b", marginBottom: "2rem" }}>Tu subcuenta de GHL ha sido creada exitosamente. Recibirás un correo electrónico con tus credenciales de acceso en breves minutos.</p>
-            <button className="glass-button" style={{ backgroundColor: "#1d4ed8" }} onClick={() => window.location.reload()}>Finalizar</button>
+            <button className="glass-button" style={{ backgroundColor: "#1d4ed8" }} onClick={() => window.location.href = "https://app.ghlenespanol.site"}>Ir a mi Cuenta GHL</button>
           </div>
         )}
       </div>

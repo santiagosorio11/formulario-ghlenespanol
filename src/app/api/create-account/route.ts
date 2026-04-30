@@ -14,6 +14,7 @@ export async function POST(req: Request) {
     const pais = formData.get("pais") as string;
     const logoFile = formData.get("logo") as File;
     const planParam = formData.get("plan") as string; // Recibe el plan
+    const password = formData.get("password") as string;
 
     const saasPlanMap: Record<string, { planId: string; priceId: string }> = {
       "pro-monthly": { planId: "69ebd2ddce2b6c16ca2aae61", priceId: "price_1TPqMjRn4XfPkgW4Ol2g3iz0" },
@@ -118,6 +119,7 @@ export async function POST(req: Request) {
       lastName: apellidos,
       email: email,
       phone: telefono,
+      password: password || "Multimarca2026*", // Agregamos el password
       type: "account",
       role: "admin",
       locationIds: [locationId]

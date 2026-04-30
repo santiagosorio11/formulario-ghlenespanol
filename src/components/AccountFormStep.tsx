@@ -92,9 +92,15 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
           <input type="text" name="apellidos" required className="glass-input" placeholder="Introduzca lo(s) apellido(s) del propietario de la cuenta GHL" />
         </div>
 
-        <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>email *</label>
-          <input type="email" name="email" required className="glass-input" placeholder="your@email.com" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Email (Será tu usuario) *</label>
+            <input type="email" name="email" required className="glass-input" placeholder="tu@email.com" />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Contraseña de acceso *</label>
+            <input type="password" name="password" required className="glass-input" placeholder="Min. 8 caracteres" minLength={8} />
+          </div>
         </div>
 
         <div>
