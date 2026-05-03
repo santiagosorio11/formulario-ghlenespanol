@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { kv } from "@vercel/kv";
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    
+
     // 1. Extraer los datos del formulario
     const nombre = formData.get("nombre") as string;
     const apellidos = formData.get("apellidos") as string;
@@ -17,14 +18,22 @@ export async function POST(req: Request) {
     const password = formData.get("password") as string;
 
     const saasPlanMap: Record<string, { planId: string; priceId: string }> = {
-      "pro-monthly": { planId: "69ebd2ddce2b6c16ca2aae61", priceId: "price_1TPqMjRn4XfPkgW4Ol2g3iz0" },
-      "pro-yearly": { planId: "69ebd2ddce2b6c16ca2aae61", priceId: "price_1TPqMjRn4XfPkgW4MUQ791Ja" },
-      "premium-monthly": { planId: "69ebd5a0ca9286b32af91933", priceId: "price_1TPqY7Rn4XfPkgW4RLeyA6Dk" },
-      "premium-yearly": { planId: "69ebd5a0ca9286b32af91933", priceId: "price_1TPqY7Rn4XfPkgW4at1O15ab" },
-      "partners-monthly": { planId: "69ebd74e9a3f0e9063905d55", priceId: "price_1TPqf4Rn4XfPkgW4YGBruwXr" },
-      "partners-yearly": { planId: "69ebd74e9a3f0e9063905d55", priceId: "price_1TPqf4Rn4XfPkgW4pEWGRTLU" },
-      "promo-monthly": { planId: "69ebd8ba959a6fd1966b354a", priceId: "price_1TPqkvRn4XfPkgW4t44gMBQr" },
-      "promo-yearly": { planId: "69ebd8ba959a6fd1966b354a", priceId: "price_1TPqkvRn4XfPkgW4dl9hBQq3" }
+      "multimarca-lifetime": {
+        planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+      },
+      "upgrade-multimarca": {
+        planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+      },
+      "promo-multimarca": {
+        planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+      },
+      "multimarca": {
+        planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+      }
     };
 
     if (!nombre || !email || !nombreCuenta || !logoFile) {
@@ -146,7 +155,7 @@ export async function POST(req: Request) {
       console.log(`Activando modo SaaS para Location ${locationId} con el plan ${planParam}...`);
       const saasConfig = saasPlanMap[planParam];
       const saasPayload = {
-        stripeAccountId: STRIPE_ACCOUNT_ID || "acct_1TNZ7KRn4XfPkgW4",
+        stripeAccountId: STRIPE_ACCOUNT_ID,
         name: `${nombre} ${apellidos}`,
         email: email,
         companyId: GHL_COMPANY_ID,
@@ -168,6 +177,16 @@ export async function POST(req: Request) {
       } else {
         console.log(`SaaS activado exitosamente para la location ${locationId}`);
       }
+    }
+
+    // 7. Incrementar contador interno (Vercel KV)
+    try {
+      await kv.incr("contador_registros");
+      const total = await kv.get("contador_registros");
+      console.log(`[STATS] Nuevo registro completado. Total histórico: ${total}`);
+    } catch (kvError) {
+      console.error("Error al actualizar el contador KV:", kvError);
+      // No bloqueamos la respuesta si falla el contador
     }
 
     return NextResponse.json({ success: true, locationId, logoUrl });

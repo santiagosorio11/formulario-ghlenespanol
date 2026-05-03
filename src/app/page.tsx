@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import AccountFormStep from "@/components/AccountFormStep";
 import { CheckCircle2 } from "lucide-react";
 
@@ -35,7 +35,11 @@ export default function Home() {
 
       {/* Contenido Dinámico */}
       <div style={{ width: "100%" }}>
-        {step === 1 && <AccountFormStep onSuccess={() => setStep(2)} />}
+        {step === 1 && (
+          <Suspense fallback={<div style={{ textAlign: "center", padding: "2rem" }}>Cargando formulario...</div>}>
+            <AccountFormStep onSuccess={() => setStep(2)} />
+          </Suspense>
+        )}
         {step === 2 && (
           <div className="glass-panel animate-in" style={{ padding: "3rem", textAlign: "center", maxWidth: "500px", margin: "0 auto", backgroundColor: "#fff" }}>
             <CheckCircle2 size={64} color="var(--success)" style={{ margin: "0 auto 1.5rem" }} />
