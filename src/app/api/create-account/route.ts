@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
+import { createClient } from "@vercel/kv";
+
+// Configuramos el cliente con las variables de Upstash
+const kv = createClient({
+  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_URL || "",
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "",
+});
 
 export async function POST(req: Request) {
   try {
