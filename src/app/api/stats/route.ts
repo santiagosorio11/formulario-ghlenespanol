@@ -1,28 +1,24 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@vercel/kv";
+import { createClient } from "redis";
 
-// Configuramos el cliente manualmente con las variables que te da el Quickstart de Upstash
-const kv = createClient({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "",
-});
+// Cliente de Redis estándar según el Quickstart
+const redis = await createClient({
+  url: process.env.REDIS_URL
+}).connect();
 
-export const dynamic = "force-dynamic"; // Para que no se guarde en cache y siempre esté actualizado
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // Verificación de variables con los nombres de tu Quickstart
-    const url = process.env.UPSTASH_REDIS_REST_URL;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    if (!url || !token) {
+    // Verificación de variable
+    if (!process.env.REDIS_URL) {
       return NextResponse.json({ 
-        error: "Faltan variables de entorno de Upstash", 
-        ayuda: "Verifica que en tu panel de Vercel aparezcan UPSTASH_REDIS_REST_URL y TOKEN."
+        error: "Falta la variable REDIS_URL", 
+        ayuda: "Copia la URL de conexión (REDIS_URL) de tu panel de Upstash/Vercel y agrégala a las variables de entorno."
       }, { status: 500 });
     }
 
-    const total = await kv.get("contador_registros") || 0;
+    const total = await redis.get("contador_registros") || 0;
     
     return NextResponse.json({ 
       success: true,

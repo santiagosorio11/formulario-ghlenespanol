@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@vercel/kv";
+import { createClient } from "redis";
 
-// Configuramos el cliente con las variables de Upstash
-const kv = createClient({
-  url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "",
-});
+// Cliente de Redis estándar según el Quickstart
+const redis = await createClient({
+  url: process.env.REDIS_URL
+}).connect();
 
 export async function POST(req: Request) {
   try {
@@ -185,14 +184,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // 7. Incrementar contador interno (Vercel KV)
+    // 7. Incrementar contador interno (Redis)
     try {
-      await kv.incr("contador_registros");
-      const total = await kv.get("contador_registros");
+      await redis.incr("contador_registros");
+      const total = await redis.get("contador_registros");
       console.log(`[STATS] Nuevo registro completado. Total histórico: ${total}`);
     } catch (kvError) {
-      console.error("Error al actualizar el contador KV:", kvError);
-      // No bloqueamos la respuesta si falla el contador
+      console.error("Error al actualizar el contador Redis:", kvError);
     }
 
     return NextResponse.json({ success: true, locationId, logoUrl });
