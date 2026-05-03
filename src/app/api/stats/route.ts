@@ -24,7 +24,7 @@ export async function GET() {
       success: true,
       mensaje: "Contador de registros interno de Multimarca GHL",
       total_registrados: total,
-      ultima_actualizacion: new Date().toLocaleString("es-CO")
+      ultima_actualizacion: new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })
     });
   } catch (error: any) {
     return NextResponse.json({ 
