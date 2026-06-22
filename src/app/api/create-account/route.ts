@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { getRedisClient } from "@/lib/redis";
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
 
-    // 1. Extraer los datos del formulario
     const nombre = formData.get("nombre") as string;
     const apellidos = formData.get("apellidos") as string;
     const email = formData.get("email") as string;
@@ -15,26 +13,26 @@ export async function POST(req: Request) {
     const pais = formData.get("pais") as string;
     const logoEntry = formData.get("logo");
     const logoFile = logoEntry instanceof File && logoEntry.size > 0 ? logoEntry : null;
-    const planParam = formData.get("plan") as string; // Recibe el plan
+    const planParam = formData.get("plan") as string;
     const password = formData.get("password") as string;
 
     const saasPlanMap: Record<string, { planId: string; priceId: string }> = {
       "multimarca-lifetime": {
         planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
-        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID",
       },
       "upgrade-multimarca": {
         planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
-        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID",
       },
       "promo-multimarca": {
         planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
-        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID",
       },
-      "multimarca": {
+      multimarca: {
         planId: "PONER_AQUI_EL_SAAS_PLAN_ID",
-        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID"
-      }
+        priceId: "PONER_AQUI_EL_STRIPE_PRICE_ID",
+      },
     };
 
     if (!nombre || !email || !nombreCuenta) {
@@ -46,16 +44,15 @@ export async function POST(req: Request) {
       GHL_COMPANY_ID,
       CLOUDINARY_CLOUD_NAME,
       CLOUDINARY_UPLOAD_PRESET,
-      STRIPE_ACCOUNT_ID
+      STRIPE_ACCOUNT_ID,
     } = process.env;
 
     if (!GHL_BEARER_TOKEN || !GHL_COMPANY_ID) {
-      return NextResponse.json({ error: "Configuración de GHL faltante en el servidor" }, { status: 500 });
+      return NextResponse.json({ error: "Configuracion de GHL faltante en el servidor" }, { status: 500 });
     }
 
     let logoUrl = "";
 
-    // 2. Subir imagen a Cloudinary (si existe el archivo y las variables)
     if (logoFile && CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
       try {
         const cloudFormData = new FormData();
@@ -83,15 +80,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Headers comunes para GHL
     const ghlHeaders = {
-      "Authorization": `Bearer ${GHL_BEARER_TOKEN}`,
-      "Version": "2021-07-28",
+      Authorization: `Bearer ${GHL_BEARER_TOKEN}`,
+      Version: "2021-07-28",
       "Content-Type": "application/json",
-      "Accept": "application/json"
+      Accept: "application/json",
     };
 
-    // 3. Crear Locación en GHL con Logo incluido
     console.log("Creando Location en GHL...");
     const locationPayload: {
       companyId: string;
@@ -105,7 +100,7 @@ export async function POST(req: Request) {
       companyId: GHL_COMPANY_ID,
       name: nombreCuenta,
       phone: telefono,
-      email: email,
+      email,
       website: dominio,
       country: pais,
     };
@@ -117,7 +112,7 @@ export async function POST(req: Request) {
     const locRes = await fetch("https://services.leadconnectorhq.com/locations/", {
       method: "POST",
       headers: ghlHeaders,
-      body: JSON.stringify(locationPayload)
+      body: JSON.stringify(locationPayload),
     });
 
     if (!locRes.ok) {
@@ -130,54 +125,51 @@ export async function POST(req: Request) {
     const locationId = locData.location?.id || locData.id;
 
     if (!locationId) {
-      return NextResponse.json({ error: "GHL no devolvió un ID de Location válido" }, { status: 500 });
+      return NextResponse.json({ error: "GHL no devolvio un ID de Location valido" }, { status: 500 });
     }
 
-    // 4. Crear Usuario Administrador en GHL
     console.log(`Creando Usuario en la Location ${locationId}...`);
     const userPayload = {
       companyId: GHL_COMPANY_ID,
       firstName: nombre,
       lastName: apellidos,
-      email: email,
+      email,
       phone: telefono,
-      password: password || "Multimarca2026*", // Agregamos el password
+      password: password || "Multimarca2026*",
       type: "account",
       role: "admin",
-      locationIds: [locationId]
+      locationIds: [locationId],
     };
 
     const userRes = await fetch("https://services.leadconnectorhq.com/users/", {
       method: "POST",
       headers: ghlHeaders,
-      body: JSON.stringify(userPayload)
+      body: JSON.stringify(userPayload),
     });
 
     if (!userRes.ok) {
       const errText = await userRes.text();
       console.error("GHL User Error:", errText);
-      // No cortamos el flujo aquí, pero logueamos el error
     }
 
-    // 6. Activar Modo SaaS si el parámetro de plan existe y es válido
     if (planParam && saasPlanMap[planParam]) {
       console.log(`Activando modo SaaS para Location ${locationId} con el plan ${planParam}...`);
       const saasConfig = saasPlanMap[planParam];
       const saasPayload = {
         stripeAccountId: STRIPE_ACCOUNT_ID,
         name: `${nombre} ${apellidos}`,
-        email: email,
+        email,
         companyId: GHL_COMPANY_ID,
         isSaaSV2: true,
         providerLocationId: locationId,
         saasPlanId: saasConfig.planId,
-        priceId: saasConfig.priceId
+        priceId: saasConfig.priceId,
       };
 
       const saasRes = await fetch(`https://services.leadconnectorhq.com/saas/enable-saas/${locationId}`, {
         method: "POST",
         headers: ghlHeaders,
-        body: JSON.stringify(saasPayload)
+        body: JSON.stringify(saasPayload),
       });
 
       if (!saasRes.ok) {
@@ -188,18 +180,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 7. Incrementar contador interno (Redis)
-    try {
-      const redis = await getRedisClient();
-      await redis.incr("contador_registros");
-      const total = await redis.get("contador_registros");
-      console.log(`[STATS] Nuevo registro completado. Total histórico: ${total}`);
-    } catch (kvError) {
-      console.error("Error al actualizar el contador Redis:", kvError);
-    }
-
     return NextResponse.json({ success: true, locationId, logoUrl });
-
   } catch (error: unknown) {
     console.error("API Error /create-account:", error);
     const message = error instanceof Error ? error.message : "Error interno del servidor";
