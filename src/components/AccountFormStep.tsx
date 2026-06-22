@@ -1,6 +1,6 @@
 "use client";
 
-import { UploadCloud, CheckCircle, Loader2 } from "lucide-react";
+import { UploadCloud, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 import PhoneInput from "react-phone-number-input";
 import { useSearchParams } from "next/navigation";
@@ -48,6 +48,11 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
         body: formData,
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`El servidor devolvio una respuesta no valida (${res.status}). Revisa la terminal de Next.js para ver el error real.`);
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -55,9 +60,9 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
       }
 
       onSuccess();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Form error:", err);
-      setErrorMsg(err.message || "Error de red.");
+      setErrorMsg(err instanceof Error ? err.message : "Error de red.");
     } finally {
       setIsSubmitting(false);
     }
@@ -167,7 +172,7 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
               cursor: logoPreview ? "default" : "pointer",
               transition: "border 0.2s"
             }}
-            onClick={(e) => {
+            onClick={() => {
               if (!logoPreview) fileInputRef.current?.click();
             }}
             onMouseOver={(e) => { if (!logoPreview) e.currentTarget.style.borderColor = "var(--primary)" }}

@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "redis";
-
-// Cliente de Redis estándar según el Quickstart
-const redis = await createClient({
-  url: process.env.REDIS_URL
-}).connect();
+import { getRedisClient } from "@/lib/redis";
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +13,8 @@ export async function POST(req: Request) {
     const nombreCuenta = formData.get("nombre_cuenta") as string;
     const dominio = formData.get("dominio") as string;
     const pais = formData.get("pais") as string;
-    const logoFile = formData.get("logo") as File;
+    const logoEntry = formData.get("logo");
+    const logoFile = logoEntry instanceof File && logoEntry.size > 0 ? logoEntry : null;
     const planParam = formData.get("plan") as string; // Recibe el plan
     const password = formData.get("password") as string;
 
@@ -41,7 +37,7 @@ export async function POST(req: Request) {
       }
     };
 
-    if (!nombre || !email || !nombreCuenta || !logoFile) {
+    if (!nombre || !email || !nombreCuenta) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
     }
 
@@ -60,7 +56,7 @@ export async function POST(req: Request) {
     let logoUrl = "";
 
     // 2. Subir imagen a Cloudinary (si existe el archivo y las variables)
-    if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
+    if (logoFile && CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
       try {
         const cloudFormData = new FormData();
         cloudFormData.append("file", logoFile);
@@ -97,7 +93,15 @@ export async function POST(req: Request) {
 
     // 3. Crear Locación en GHL con Logo incluido
     console.log("Creando Location en GHL...");
-    const locationPayload: any = {
+    const locationPayload: {
+      companyId: string;
+      name: string;
+      phone: string;
+      email: string;
+      website: string;
+      country: string;
+      logoUrl?: string;
+    } = {
       companyId: GHL_COMPANY_ID,
       name: nombreCuenta,
       phone: telefono,
@@ -186,6 +190,7 @@ export async function POST(req: Request) {
 
     // 7. Incrementar contador interno (Redis)
     try {
+      const redis = await getRedisClient();
       await redis.incr("contador_registros");
       const total = await redis.get("contador_registros");
       console.log(`[STATS] Nuevo registro completado. Total histórico: ${total}`);
@@ -195,8 +200,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, locationId, logoUrl });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error /create-account:", error);
-    return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Error interno del servidor";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

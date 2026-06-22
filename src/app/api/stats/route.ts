@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "redis";
-
-// Cliente de Redis estándar según el Quickstart
-const redis = await createClient({
-  url: process.env.REDIS_URL
-}).connect();
+import { getRedisClient } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +13,7 @@ export async function GET() {
       }, { status: 500 });
     }
 
+    const redis = await getRedisClient();
     const total = await redis.get("contador_registros") || 0;
     
     return NextResponse.json({ 
@@ -26,10 +22,11 @@ export async function GET() {
       total_registrados: total,
       ultima_actualizacion: new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
     return NextResponse.json({ 
       error: "Error al leer el contador", 
-      mensaje_tecnico: error.message 
+      mensaje_tecnico: message 
     }, { status: 500 });
   }
 }
