@@ -1,5 +1,5 @@
 type FetchImpl = typeof fetch;
-const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
 const DEFAULT_REQUEST_SPACING_MS = 350;
 
 export const REBILLING_PRODUCTS = [
@@ -488,6 +488,9 @@ export class GhlClient {
   async addAdminLocationToExistingUser(user: GhlUser, locationId: string) {
     const locationIds = Array.from(new Set([...(user.locationIds ?? []), locationId]));
 
+    // small delay to reduce chance of hitting per-second rate limits for this critical update
+    await sleep(1000);
+
     await this.request(
       `https://services.leadconnectorhq.com/users/${user.id}`,
       {
@@ -528,11 +531,18 @@ export class GhlClient {
         },
       });
 
-      if (response.status !== 429 || attempt >= RATE_LIMIT_RETRY_DELAYS_MS.length) {
-        break;
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("retry-after");
+        console.warn(`GHL 429 on ${url} (attempt ${attempt}) retry-after=${retryAfter}`);
+
+        if (attempt < RATE_LIMIT_RETRY_DELAYS_MS.length) {
+          await sleep(getRetryDelayMs(response, attempt));
+          continue;
+        }
       }
 
-      await sleep(getRetryDelayMs(response, attempt));
+      // Break for any non-429 response or when retries exhausted
+      break;
     }
 
     const isOk = okStatuses ? okStatuses.includes(response.status) : response.ok;
@@ -567,10 +577,15 @@ function getRetryDelayMs(response: Response, attempt: number) {
   const retryAfterSeconds = retryAfter ? Number(retryAfter) : Number.NaN;
 
   if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
-    return retryAfterSeconds * 1000;
+    // add small jitter to avoid thundering herd
+    const base = retryAfterSeconds * 1000;
+    const jitter = Math.floor(Math.random() * 500) - 250; // +/-250ms
+    return Math.max(0, base + jitter);
   }
 
-  return RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+  const base = RATE_LIMIT_RETRY_DELAYS_MS[Math.min(attempt, RATE_LIMIT_RETRY_DELAYS_MS.length - 1)];
+  const jitter = Math.floor(Math.random() * 500) - 250; // +/-250ms
+  return Math.max(0, base + jitter);
 }
 
 function sleep(ms: number) {
