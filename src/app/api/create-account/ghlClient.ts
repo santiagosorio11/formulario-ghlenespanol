@@ -1,5 +1,5 @@
 type FetchImpl = typeof fetch;
-const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000];
+const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
 const DEFAULT_REQUEST_SPACING_MS = 350;
 
 export const REBILLING_PRODUCTS = [

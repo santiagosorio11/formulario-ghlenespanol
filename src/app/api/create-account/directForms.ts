@@ -98,23 +98,25 @@ export function getSaasPriceIdForBillingInterval(
 
 export function validatePasswordPolicy(password: string) {
   if (password.length < 10) {
-    return "La contrasena debe tener minimo 10 caracteres";
+    return "La contraseña debe tener mínimo 10 caracteres";
   }
 
-  if (!/[A-Z]/.test(password)) {
-    return "La contrasena debe incluir al menos una mayuscula";
+  // Use Unicode property escapes to allow letters like 'ñ', accented characters, etc.
+  // Requires the 'u' flag which is supported in modern Node.js and browsers used by Next.js.
+  if (!/\p{Lu}/u.test(password)) {
+    return "La contraseña debe incluir al menos una mayúscula";
   }
 
-  if (!/[a-z]/.test(password)) {
-    return "La contrasena debe incluir al menos una minuscula";
+  if (!/\p{Ll}/u.test(password)) {
+    return "La contraseña debe incluir al menos una minúscula";
   }
 
-  if (!/[0-9]/.test(password)) {
-    return "La contrasena debe incluir al menos un numero";
+  if (!/\d/.test(password)) {
+    return "La contraseña debe incluir al menos un número";
   }
 
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    return "La contrasena debe incluir al menos un caracter especial";
+  if (!/[^\p{L}\p{N}]/u.test(password)) {
+    return "La contraseña debe incluir al menos un carácter especial";
   }
 
   return null;

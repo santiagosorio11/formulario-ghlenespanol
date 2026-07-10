@@ -141,7 +141,6 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 minLength={10}
-                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}"
                 title="Mínimo 10 caracteres, una mayúscula, una minúscula, un número y un carácter especial."
                 style={{ paddingRight: "3rem" }}
               />
@@ -332,10 +331,10 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
 function getPasswordScore(password: string) {
   return [
     password.length >= 10,
-    /[a-z]/.test(password),
-    /[A-Z]/.test(password),
+    /\p{Ll}/u.test(password),
+    /\p{Lu}/u.test(password),
     /\d/.test(password),
-    /[^A-Za-z0-9]/.test(password),
+    /[^\p{L}\p{N}]/u.test(password),
   ].filter(Boolean).length;
 }
 
