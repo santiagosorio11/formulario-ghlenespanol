@@ -90,7 +90,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "No se encontro un partner existente con ese email" }, { status: 400 });
       }
 
-      await ghlClient.addAdminLocationToExistingUser(partnerUser, locationId);
+      // Schedule partner update asynchronously so the API response does not wait for it.
+      ghlClient.scheduleAddAdminLocationToExistingUser(partnerUser, locationId);
     }
 
     await ghlClient.updateRebilling(locationId);

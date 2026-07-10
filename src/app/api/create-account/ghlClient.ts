@@ -491,17 +491,14 @@ export class GhlClient {
     // small delay to reduce chance of hitting per-second rate limits for this critical update
     await sleep(1000);
 
+    // Only update the fields required: locationIds, role and permissions.
+    // Do NOT change firstName, lastName, email or phone.
     await this.request(
       `https://services.leadconnectorhq.com/users/${user.id}`,
       {
         method: "PUT",
         body: JSON.stringify({
           companyId: this.companyId,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          type: "account",
           role: "admin",
           locationIds,
           permissions: getAdminPermissions(user.permissions),
@@ -509,6 +506,19 @@ export class GhlClient {
       },
       "No se pudo agregar el partner como administrador de la subcuenta",
     );
+  }
+
+  scheduleAddAdminLocationToExistingUser(user: GhlUser, locationId: string, delayMs = 60000) {
+    // Fire-and-forget scheduled update. Will attempt the update after `delayMs`.
+    (async () => {
+      try {
+        await sleep(delayMs);
+        await this.addAdminLocationToExistingUser(user, locationId);
+        console.info(`Scheduled partner update succeeded for user=${user.id} location=${locationId}`);
+      } catch (err) {
+        console.error("Scheduled partner update failed:", err);
+      }
+    })();
   }
 
   private async request<T>(
