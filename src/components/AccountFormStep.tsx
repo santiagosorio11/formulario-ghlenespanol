@@ -1,37 +1,51 @@
 "use client";
 
-import { UploadCloud, Loader2 } from "lucide-react";
-import { useState, useRef } from "react";
+import type { DirectFormConfig } from "@/app/api/create-account/directForms";
+import { Loader2, UploadCloud } from "lucide-react";
+import { useRef, useState } from "react";
 import PhoneInput from "react-phone-number-input";
-import { useSearchParams } from "next/navigation";
 
 interface AccountFormStepProps {
+  formConfig: DirectFormConfig;
   onSuccess: () => void;
 }
 
-export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
-  const searchParams = useSearchParams();
-  const planQuery = searchParams.get("plan") || "";
-  
+const labelStyle = {
+  display: "block",
+  fontSize: "0.875rem",
+  marginBottom: "0.25rem",
+  color: "#333",
+  fontWeight: 500,
+};
+
+export default function AccountFormStep({ formConfig, onSuccess }: AccountFormStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | undefined>("");
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2.5 * 1024 * 1024) {
-        setErrorMsg("El logo excede el límite de 2.5 MB.");
-        setLogoPreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-      setErrorMsg("");
-      setLogoPreview(URL.createObjectURL(file));
+
+    if (!file) {
+      return;
     }
+
+    if (file.size > 2.5 * 1024 * 1024) {
+      setErrorMsg("El logo excede el limite de 2.5 MB.");
+      setLogoPreview(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      return;
+    }
+
+    setErrorMsg("");
+    setLogoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,14 +55,18 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
 
     try {
       const formData = new FormData(e.currentTarget);
-      if (phone) formData.set("telefono", phone);
-      
+
+      if (phone) {
+        formData.set("telefono", phone);
+      }
+
       const res = await fetch("/api/create-account", {
         method: "POST",
         body: formData,
       });
 
       const contentType = res.headers.get("content-type") || "";
+
       if (!contentType.includes("application/json")) {
         throw new Error(`El servidor devolvio una respuesta no valida (${res.status}). Revisa la terminal de Next.js para ver el error real.`);
       }
@@ -56,7 +74,7 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Ocurrió un error al procesar la solicitud.");
+        throw new Error(data.error || "Ocurrio un error al procesar la solicitud.");
       }
 
       onSuccess();
@@ -77,35 +95,36 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
       )}
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        
+        <input type="hidden" name="form_slug" value={formConfig.slug} />
+
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Nombre de la Cuenta / Empresa *</label>
+          <label style={labelStyle}>{formConfig.accountLabel} *</label>
           <input type="text" name="nombre_cuenta" required className="glass-input" placeholder="Ej. Mi Agencia" />
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Nombre</label>
-          <input type="text" name="nombre" required className="glass-input" placeholder="Introduzca su nombre del propietario de la Cuenta GHL" />
+          <label style={labelStyle}>Nombre *</label>
+          <input type="text" name="nombre" required className="glass-input" placeholder="Nombre del propietario" />
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Apellidos</label>
-          <input type="text" name="apellidos" required className="glass-input" placeholder="Introduzca lo(s) apellido(s) del propietario de la cuenta GHL" />
+          <label style={labelStyle}>Apellidos *</label>
+          <input type="text" name="apellidos" required className="glass-input" placeholder="Apellidos del propietario" />
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <div>
-            <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Email (Será tu usuario) *</label>
-            <input type="email" name="email" required className="glass-input" placeholder="tu@email.com" />
+            <label style={labelStyle}>Email del usuario principal *</label>
+            <input type="email" name="email" required className="glass-input" placeholder="cliente@email.com" />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Contraseña de acceso *</label>
+            <label style={labelStyle}>Contrasena de acceso *</label>
             <input type="password" name="password" required className="glass-input" placeholder="Min. 8 caracteres" minLength={8} />
           </div>
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Teléfono que reciba SMS *</label>
+          <label style={labelStyle}>Telefono que reciba SMS *</label>
           <div className="glass-input" style={{ padding: "0.75rem 1rem" }}>
             <PhoneInput
               international
@@ -116,73 +135,77 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
               style={{ width: "100%" }}
             />
           </div>
-          {/* Campo oculto para asegurar que se vaya en el formData en caso que no se use el estado modificado */}
           <input type="hidden" name="telefono" value={phone || ""} />
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>País *</label>
+          <label style={labelStyle}>Pais *</label>
           <select name="pais" required className="glass-input" style={{ appearance: "auto" }} defaultValue="">
-            <option value="" disabled>Introduzca su país</option>
+            <option value="" disabled>Selecciona el pais</option>
             <option value="US">Estados Unidos</option>
-            <option value="ES">España</option>
-            <option value="MX">México</option>
+            <option value="ES">Espana</option>
+            <option value="MX">Mexico</option>
             <option value="CO">Colombia</option>
             <option value="AR">Argentina</option>
-            <option value="PE">Perú</option>
+            <option value="PE">Peru</option>
             <option value="CL">Chile</option>
           </select>
         </div>
 
-        {planQuery ? (
-          <input type="hidden" name="plan" value={planQuery} />
-        ) : (
-          <div style={{ padding: "1rem", backgroundColor: "#fff1f2", border: "1px solid #fecaca", borderRadius: "0.5rem", color: "#b91c1c", fontSize: "0.875rem", textAlign: "center" }}>
-            <strong>Error:</strong> No se ha detectado un plan de pago válido. Por favor, accede al formulario desde tu link de confirmación de Stripe.
+        {formConfig.requiresBillingInterval && (
+          <div>
+            <label style={{ ...labelStyle, marginBottom: "0.5rem" }}>Tipo de cobro *</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem", padding: "0.875rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem" }}>
+                <input type="radio" name="billing_interval" value="month" required style={{ width: "1rem", height: "1rem" }} />
+                Mensual
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem", padding: "0.875rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem" }}>
+                <input type="radio" name="billing_interval" value="year" required style={{ width: "1rem", height: "1rem" }} />
+                Anual
+              </label>
+            </div>
+          </div>
+        )}
+
+        {formConfig.requiresPartnerEmail && (
+          <div>
+            <label style={labelStyle}>Email del partner *</label>
+            <input type="email" name="partner_email" required className="glass-input" placeholder="partner@email.com" />
           </div>
         )}
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.5rem", color: "#333", fontWeight: 500 }}>¿Quieres administrar esta cuenta GHL Premium? *</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem" }}>
-              <input type="radio" name="quiere_administrar" value="Si" required style={{ width: "1rem", height: "1rem" }} />
-              Si
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem" }}>
-              <input type="radio" name="quiere_administrar" value="No" required style={{ width: "1rem", height: "1rem" }} />
-              No
-            </label>
-          </div>
+          <label style={labelStyle}>Dominio</label>
+          <input type="url" name="dominio" className="glass-input" placeholder="https://app.tudominio.com" />
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Dominio</label>
-          <input type="url" name="dominio" className="glass-input" placeholder="app.tudominio.com" />
-        </div>
-
-        <div>
-          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.25rem", color: "#333", fontWeight: 500 }}>Logo</label>
-          <div 
-            style={{ 
-              border: "1px solid #cbd5e1", 
-              borderRadius: "0.375rem", 
-              padding: "2rem", 
+          <label style={labelStyle}>Logo</label>
+          <div
+            style={{
+              border: "1px solid #cbd5e1",
+              borderRadius: "0.375rem",
+              padding: "2rem",
               textAlign: "center",
               cursor: logoPreview ? "default" : "pointer",
-              transition: "border 0.2s"
+              transition: "border 0.2s",
             }}
             onClick={() => {
               if (!logoPreview) fileInputRef.current?.click();
             }}
-            onMouseOver={(e) => { if (!logoPreview) e.currentTarget.style.borderColor = "var(--primary)" }}
-            onMouseOut={(e) => { if (!logoPreview) e.currentTarget.style.borderColor = "#cbd5e1" }}
+            onMouseOver={(event) => {
+              if (!logoPreview) event.currentTarget.style.borderColor = "var(--primary)";
+            }}
+            onMouseOut={(event) => {
+              if (!logoPreview) event.currentTarget.style.borderColor = "#cbd5e1";
+            }}
           >
-            <input 
-              type="file" 
-              name="logo" 
-              accept="image/*" 
-              style={{ display: "none" }} 
+            <input
+              type="file"
+              name="logo"
+              accept="image/*"
+              style={{ display: "none" }}
               ref={fileInputRef}
               onChange={handleFileChange}
             />
@@ -191,19 +214,25 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={logoPreview} alt="Logo Preview" style={{ maxHeight: "100px", objectFit: "contain", marginBottom: "1rem", borderRadius: "0.25rem" }} />
                 <div style={{ display: "flex", gap: "1rem" }}>
-                  <button 
-                    type="button" 
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                     style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "0.875rem", cursor: "pointer", fontWeight: 500 }}
                   >
                     Cambiar imagen
                   </button>
-                  <button 
-                    type="button" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setLogoPreview(null); 
-                      if(fileInputRef.current) fileInputRef.current.value = ""; 
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setLogoPreview(null);
+
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
                     }}
                     style={{ background: "none", border: "none", color: "var(--error)", fontSize: "0.875rem", cursor: "pointer", fontWeight: 500 }}
                   >
@@ -216,21 +245,21 @@ export default function AccountFormStep({ onSuccess }: AccountFormStepProps) {
                 <div style={{ background: "#f1f5f9", borderRadius: "50%", padding: "0.5rem", marginBottom: "0.5rem" }}>
                   <UploadCloud size={20} />
                 </div>
-                <p style={{ fontWeight: "500", marginBottom: "0.25rem", color: "#333" }}>Haga clic para subir</p>
+                <p style={{ fontWeight: 500, marginBottom: "0.25rem", color: "#333" }}>Haz clic para subir</p>
                 <p style={{ fontSize: "0.75rem" }}>Formato horizontal (350x180 px). JPG/PNG/SVG hasta 2.5MB.</p>
               </div>
             )}
           </div>
         </div>
-        
+
         <button type="submit" className="glass-button" style={{ marginTop: "1rem", backgroundColor: "#1d4ed8" }} disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="animate-spin" />
-              Creando Cuenta...
+              Creando cuenta...
             </>
           ) : (
-            "Crear Cuenta GHL"
+            formConfig.submitLabel
           )}
         </button>
       </form>
