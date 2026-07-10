@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { GhlClient, REBILLING_PRODUCTS } from "../src/app/api/create-account/ghlClient.ts";
+import {
+  DEFAULT_ADMIN_PERMISSIONS,
+  DEFAULT_ADMIN_SCOPES,
+  GhlClient,
+  REBILLING_PRODUCTS,
+} from "../src/app/api/create-account/ghlClient.ts";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -107,6 +112,38 @@ test("request failures throw instead of being silently ignored", async () => {
   );
 });
 
+test("createUser sends admin payment permissions", async () => {
+  const calls = [];
+  const client = new GhlClient({
+    token: "token",
+    companyId: "company_123",
+    stripeAccountId: "acct_123",
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(init.body) });
+      return jsonResponse({ id: "user_123" }, 201);
+    },
+  });
+
+  await client.createUser({
+    firstName: "Cliente",
+    lastName: "Uno",
+    email: "cliente@example.com",
+    phone: "+573001112233",
+    password: "Password123*",
+    locationIds: ["loc_123"],
+  });
+
+  assert.equal(calls[0].url, "https://services.leadconnectorhq.com/users/");
+  assert.deepEqual(calls[0].body.permissions, DEFAULT_ADMIN_PERMISSIONS);
+  assert.equal(calls[0].body.permissions.paymentsEnabled, true);
+  assert.equal(calls[0].body.permissions.recordPaymentEnabled, true);
+  assert.equal(calls[0].body.permissions.settingsEnabled, true);
+  assert.deepEqual(calls[0].body.permissions.scopes, DEFAULT_ADMIN_SCOPES);
+  assert.ok(calls[0].body.permissions.scopes.includes("payments/settings.write"));
+  assert.ok(calls[0].body.permissions.scopes.includes("payments/subscriptions.sharePaymentMethod"));
+  assert.ok(calls[0].body.permissions.scopes.includes("locations.billing.manage"));
+});
+
 test("upsertAdminUser attaches an existing user when GHL rejects duplicate email", async () => {
   const calls = [];
   const client = new GhlClient({
@@ -129,6 +166,10 @@ test("upsertAdminUser attaches an existing user when GHL rejects duplicate email
               firstName: "Cliente",
               lastName: "Uno",
               locationIds: ["loc_old"],
+              permissions: {
+                contactsEnabled: true,
+                paymentsEnabled: false,
+              },
             },
           ],
         });
@@ -151,4 +192,9 @@ test("upsertAdminUser attaches an existing user when GHL rejects duplicate email
   assert.equal(updateCall.method, "PUT");
   assert.deepEqual(updateCall.body.locationIds, ["loc_old", "loc_new"]);
   assert.equal(updateCall.body.role, "admin");
+  assert.equal(updateCall.body.permissions.contactsEnabled, true);
+  assert.equal(updateCall.body.permissions.paymentsEnabled, true);
+  assert.equal(updateCall.body.permissions.recordPaymentEnabled, true);
+  assert.equal(updateCall.body.permissions.settingsEnabled, true);
+  assert.deepEqual(updateCall.body.permissions.scopes, DEFAULT_ADMIN_SCOPES);
 });
