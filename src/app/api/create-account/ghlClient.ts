@@ -508,15 +508,38 @@ export class GhlClient {
     );
   }
 
-  scheduleAddAdminLocationToExistingUser(user: GhlUser, locationId: string, delayMs = 60000) {
-    // Fire-and-forget scheduled update. Will attempt the update after `delayMs`.
+  scheduleAddAdminLocationToExistingUser(
+    user: GhlUser,
+    locationId: string,
+    delayMs = 60000,
+    maxAttempts = 60,
+  ) {
+    // Fire-and-forget scheduled update with retries every `delayMs` milliseconds.
     (async () => {
       try {
+        // initial delay before first attempt
         await sleep(delayMs);
-        await this.addAdminLocationToExistingUser(user, locationId);
-        console.info(`Scheduled partner update succeeded for user=${user.id} location=${locationId}`);
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          try {
+            await this.addAdminLocationToExistingUser(user, locationId);
+            console.info(`Scheduled partner update succeeded for user=${user.id} location=${locationId} (attempt=${attempt})`);
+            return;
+          } catch (err) {
+            console.warn(`Scheduled partner update attempt ${attempt} failed for user=${user.id} location=${locationId}:`, err);
+
+            if (attempt < maxAttempts) {
+              // wait before next retry
+              await sleep(delayMs);
+              continue;
+            }
+
+            console.error(`Scheduled partner update exhausted ${maxAttempts} attempts for user=${user.id} location=${locationId}`);
+          }
+        }
       } catch (err) {
-        console.error("Scheduled partner update failed:", err);
+        // Catch any unexpected scheduler errors; don't propagate to caller.
+        console.error("Partner update scheduler internal error:", err);
       }
     })();
   }
