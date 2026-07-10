@@ -512,7 +512,7 @@ export class GhlClient {
     user: GhlUser,
     locationId: string,
     delayMs = 60000,
-    maxAttempts = 60,
+    maxAttempts = 5,
   ) {
     // Fire-and-forget scheduled update with retries every `delayMs` milliseconds.
     (async () => {
