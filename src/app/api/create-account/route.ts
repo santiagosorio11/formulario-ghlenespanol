@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       CLOUDINARY_CLOUD_NAME,
       CLOUDINARY_UPLOAD_PRESET,
       STRIPE_ACCOUNT_ID,
+      GHL_REQUEST_SPACING_MS,
     } = process.env;
 
     if (!GHL_BEARER_TOKEN || !GHL_COMPANY_ID) {
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
       token: GHL_BEARER_TOKEN,
       companyId: GHL_COMPANY_ID,
       stripeAccountId: STRIPE_ACCOUNT_ID,
+      requestSpacingMs: parseOptionalNumber(GHL_REQUEST_SPACING_MS),
     });
     const locationId = await ghlClient.createLocation({
       name: nombreCuenta,
@@ -81,6 +83,16 @@ export async function POST(req: Request) {
       locationIds: [locationId],
     });
 
+    if (formConfig.requiresPartnerEmail) {
+      const partnerUser = await ghlClient.findUserByEmail(partnerEmail);
+
+      if (!partnerUser) {
+        return NextResponse.json({ error: "No se encontro un partner existente con ese email" }, { status: 400 });
+      }
+
+      await ghlClient.addAdminLocationToExistingUser(partnerUser, locationId);
+    }
+
     await ghlClient.updateRebilling(locationId);
 
     if (formConfig.saasPlanId) {
@@ -100,16 +112,6 @@ export async function POST(req: Request) {
       });
     }
 
-    if (formConfig.requiresPartnerEmail) {
-      const partnerUser = await ghlClient.findUserByEmail(partnerEmail);
-
-      if (!partnerUser) {
-        return NextResponse.json({ error: "No se encontro un partner existente con ese email" }, { status: 400 });
-      }
-
-      await ghlClient.addAdminLocationToExistingUser(partnerUser, locationId);
-    }
-
     return NextResponse.json({ success: true, locationId, logoUrl });
   } catch (error: unknown) {
     console.error("API Error /create-account:", error);
@@ -121,6 +123,15 @@ export async function POST(req: Request) {
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function parseOptionalNumber(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 async function uploadLogoIfPresent({

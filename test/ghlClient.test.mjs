@@ -21,6 +21,7 @@ test("createLocation sends snapshotId with the sub-account payload", async () =>
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
       return jsonResponse({ location: { id: "loc_123" } });
@@ -48,6 +49,7 @@ test("updateRebilling enables every supported rebilling product", async () => {
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
       return jsonResponse({ success: true }, 201);
@@ -69,6 +71,7 @@ test("enableSaas sends the selected SaaS plan and price", async () => {
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
       return jsonResponse({ success: true });
@@ -95,6 +98,7 @@ test("request failures throw instead of being silently ignored", async () => {
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async () => new Response("bad request", { status: 400 }),
   });
 
@@ -112,12 +116,46 @@ test("request failures throw instead of being silently ignored", async () => {
   );
 });
 
+test("request retries when GHL returns rate limit", async () => {
+  const calls = [];
+  const client = new GhlClient({
+    token: "token",
+    companyId: "company_123",
+    stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(init.body) });
+
+      if (calls.length === 1) {
+        return new Response(JSON.stringify({ statusCode: 429, message: "Too Many Requests !" }), {
+          status: 429,
+          headers: { "Retry-After": "0" },
+        });
+      }
+
+      return jsonResponse({ success: true }, 201);
+    },
+  });
+
+  await client.createUser({
+    firstName: "Cliente",
+    lastName: "Uno",
+    email: "cliente@example.com",
+    phone: "+573001112233",
+    password: "Password123*",
+    locationIds: ["loc_123"],
+  });
+
+  assert.equal(calls.length, 2);
+});
+
 test("createUser sends admin payment permissions", async () => {
   const calls = [];
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
       return jsonResponse({ id: "user_123" }, 201);
@@ -150,6 +188,7 @@ test("upsertAdminUser attaches an existing user when GHL rejects duplicate email
     token: "token",
     companyId: "company_123",
     stripeAccountId: "acct_123",
+    requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), method: init.method, body: init.body ? JSON.parse(init.body) : null });
 

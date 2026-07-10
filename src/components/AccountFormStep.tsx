@@ -1,7 +1,7 @@
 "use client";
 
 import type { DirectFormConfig } from "@/app/api/create-account/directForms";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Eye, EyeOff, Info, Loader2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import PhoneInput from "react-phone-number-input";
 
@@ -23,8 +23,12 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
   const [errorMsg, setErrorMsg] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | undefined>("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const passwordScore = getPasswordScore(password);
+  const passwordStrength = getPasswordStrength(passwordScore, password.length > 0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,17 +122,66 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
             <input type="email" name="email" required className="glass-input" placeholder="cliente@email.com" />
           </div>
           <div>
-            <label style={labelStyle}>Contrasena de acceso *</label>
-            <input
-              type="password"
-              name="password"
-              required
-              className="glass-input"
-              placeholder="Min. 10, Aa, 1, *"
-              minLength={10}
-              pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}"
-              title="Minimo 10 caracteres, una mayuscula, una minuscula, un numero y un caracter especial"
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.25rem" }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Contraseña de acceso *</label>
+              <span
+                title="Mínimo 10 caracteres, una mayúscula, una minúscula, un número y un carácter especial."
+                aria-label="Requisitos de contraseña"
+                style={{ color: "#64748b", display: "inline-flex", cursor: "help" }}
+              >
+                <Info size={15} />
+              </span>
+            </div>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                required
+                className="glass-input"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={10}
+                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}"
+                title="Mínimo 10 caracteres, una mayúscula, una minúscula, un número y un carácter especial."
+                style={{ paddingRight: "3rem" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                style={{
+                  position: "absolute",
+                  right: "0.625rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  border: "none",
+                  background: "transparent",
+                  color: "#475569",
+                  display: "inline-flex",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <div aria-live="polite" style={{ marginTop: "0.5rem" }}>
+              <div style={{ height: "0.375rem", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+                <div
+                  style={{
+                    width: passwordStrength.width,
+                    height: "100%",
+                    background: passwordStrength.color,
+                    borderRadius: "999px",
+                    transition: "width 0.2s ease, background 0.2s ease",
+                  }}
+                />
+              </div>
+              <p style={{ marginTop: "0.25rem", fontSize: "0.75rem", color: passwordStrength.color, fontWeight: 500 }}>
+                {passwordStrength.label}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -264,7 +317,7 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
         <button type="submit" className="glass-button" style={{ marginTop: "1rem", backgroundColor: "#1d4ed8" }} disabled={isSubmitting}>
           {isSubmitting ? (
             <>
-              <Loader2 className="animate-spin" />
+              <Loader2 className="spin-loader" />
               Creando cuenta...
             </>
           ) : (
@@ -274,4 +327,30 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
       </form>
     </div>
   );
+}
+
+function getPasswordScore(password: string) {
+  return [
+    password.length >= 10,
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length;
+}
+
+function getPasswordStrength(score: number, hasPassword: boolean) {
+  if (!hasPassword) {
+    return { label: "Seguridad", color: "#64748b", width: "0%" };
+  }
+
+  if (score <= 2) {
+    return { label: "Seguridad baja", color: "#dc2626", width: "35%" };
+  }
+
+  if (score <= 4) {
+    return { label: "Seguridad media", color: "#d97706", width: "70%" };
+  }
+
+  return { label: "Seguridad alta", color: "#16a34a", width: "100%" };
 }

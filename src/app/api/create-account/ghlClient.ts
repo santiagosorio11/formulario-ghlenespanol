@@ -1,4 +1,6 @@
 type FetchImpl = typeof fetch;
+const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000];
+const DEFAULT_REQUEST_SPACING_MS = 350;
 
 export const REBILLING_PRODUCTS = [
   "contentAI",
@@ -275,6 +277,7 @@ interface GhlClientOptions {
   companyId: string;
   stripeAccountId?: string;
   fetchImpl?: FetchImpl;
+  requestSpacingMs?: number;
 }
 
 interface CreateLocationInput {
@@ -326,12 +329,20 @@ export class GhlClient {
   private readonly companyId: string;
   private readonly stripeAccountId?: string;
   private readonly fetchImpl: FetchImpl;
+  private readonly requestSpacingMs: number;
 
-  constructor({ token, companyId, stripeAccountId, fetchImpl = fetch }: GhlClientOptions) {
+  constructor({
+    token,
+    companyId,
+    stripeAccountId,
+    fetchImpl = fetch,
+    requestSpacingMs = DEFAULT_REQUEST_SPACING_MS,
+  }: GhlClientOptions) {
     this.token = token;
     this.companyId = companyId;
     this.stripeAccountId = stripeAccountId;
     this.fetchImpl = fetchImpl;
+    this.requestSpacingMs = Math.max(0, requestSpacingMs);
   }
 
   async createLocation(input: CreateLocationInput) {
@@ -503,16 +514,26 @@ export class GhlClient {
     errorMessage: string,
     okStatuses?: number[],
   ): Promise<T> {
-    const response = await this.fetchImpl(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Version: "2021-07-28",
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...init.headers,
-      },
-    });
+    let response: Response;
+
+    for (let attempt = 0; ; attempt += 1) {
+      response = await this.fetchImpl(url, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Version: "2021-07-28",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...init.headers,
+        },
+      });
+
+      if (response.status !== 429 || attempt >= RATE_LIMIT_RETRY_DELAYS_MS.length) {
+        break;
+      }
+
+      await sleep(getRetryDelayMs(response, attempt));
+    }
 
     const isOk = okStatuses ? okStatuses.includes(response.status) : response.ok;
 
@@ -522,10 +543,36 @@ export class GhlClient {
     }
 
     if (response.status === 204) {
+      await this.waitBetweenRequests();
       return {} as T;
     }
 
     const text = await response.text();
-    return (text ? JSON.parse(text) : {}) as T;
+    const data = (text ? JSON.parse(text) : {}) as T;
+    await this.waitBetweenRequests();
+    return data;
   }
+
+  private async waitBetweenRequests() {
+    if (this.requestSpacingMs <= 0) {
+      return;
+    }
+
+    await sleep(this.requestSpacingMs);
+  }
+}
+
+function getRetryDelayMs(response: Response, attempt: number) {
+  const retryAfter = response.headers.get("retry-after");
+  const retryAfterSeconds = retryAfter ? Number(retryAfter) : Number.NaN;
+
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+    return retryAfterSeconds * 1000;
+  }
+
+  return RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
