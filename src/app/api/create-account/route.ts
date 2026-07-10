@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDirectFormConfig, getSaasPriceIdForBillingInterval } from "./directForms";
+import { getDirectFormConfig, getSaasPriceIdForBillingInterval, validatePasswordPolicy } from "./directForms";
 import { GhlClient } from "./ghlClient";
 
 export async function POST(req: Request) {
@@ -28,6 +28,12 @@ export async function POST(req: Request) {
 
     if (!nombre || !email || !nombreCuenta || !telefono || !pais || !password) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
+    }
+
+    const passwordError = validatePasswordPolicy(password);
+
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
     }
 
     if (formConfig.requiresPartnerEmail && !partnerEmail) {
@@ -66,7 +72,7 @@ export async function POST(req: Request) {
       snapshotId: formConfig.snapshotId,
     });
 
-    await ghlClient.createUser({
+    await ghlClient.upsertAdminUser({
       firstName: nombre,
       lastName: apellidos,
       email,

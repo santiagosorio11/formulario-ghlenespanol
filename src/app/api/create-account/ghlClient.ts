@@ -1,5 +1,25 @@
 type FetchImpl = typeof fetch;
 
+export const REBILLING_PRODUCTS = [
+  "contentAI",
+  "workflow_premium_actions",
+  "workflow_ai",
+  "conversationAI",
+  "EmailNotification",
+  "whatsApp",
+  "reviewsAI",
+  "VERIFIED_CALLER_ID",
+  "WALLET_SALES_TAX",
+  "NOTIFICATION_SMS",
+  "EmailSmtp",
+  "EmailVerification",
+  "autoCompleteAddress",
+  "funnelAI",
+  "domainPurchase",
+  "Phone",
+  "Email",
+] as const;
+
 interface GhlClientOptions {
   token: string;
   companyId: string;
@@ -117,19 +137,55 @@ export class GhlClient {
     );
   }
 
-  async updateRebilling(locationId: string) {
-    await this.request(
-      `https://services.leadconnectorhq.com/saas/update-rebilling/${this.companyId}`,
+  async upsertAdminUser(input: CreateUserInput) {
+    try {
+      await this.createUser(input);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+
+      if (!message.includes("A user with this email already exists")) {
+        throw error;
+      }
+    }
+
+    const existingUser = await this.findUserByEmail(input.email);
+
+    if (!existingUser) {
+      throw new Error("El usuario ya existe en GHL, pero no se pudo encontrar para asignarlo a la nueva subcuenta");
+    }
+
+    await this.addAdminLocationToExistingUser(
       {
-        method: "POST",
-        body: JSON.stringify({
-          locationIds: [locationId],
-          enableRebilling: true,
-        }),
+        ...existingUser,
+        firstName: existingUser.firstName ?? input.firstName,
+        lastName: existingUser.lastName ?? input.lastName,
+        phone: existingUser.phone ?? input.phone,
       },
-      "No se pudo activar la refacturacion en GHL",
-      [200, 201],
+      input.locationIds[0],
     );
+  }
+
+  async updateRebilling(locationId: string) {
+    for (const product of REBILLING_PRODUCTS) {
+      await this.request(
+        `https://services.leadconnectorhq.com/saas/update-rebilling/${this.companyId}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            locationIds: [locationId],
+            product,
+            config: {
+              optIn: true,
+              enabled: true,
+              markup: 0,
+            },
+          }),
+        },
+        `No se pudo activar la refacturacion de ${product} en GHL`,
+        [200, 201],
+      );
+    }
   }
 
   async enableSaas(input: EnableSaasInput) {

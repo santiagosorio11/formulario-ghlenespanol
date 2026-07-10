@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { GhlClient } from "../src/app/api/create-account/ghlClient.ts";
+import { GhlClient, REBILLING_PRODUCTS } from "../src/app/api/create-account/ghlClient.ts";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -37,7 +37,7 @@ test("createLocation sends snapshotId with the sub-account payload", async () =>
   assert.equal(calls[0].body.snapshotId, "snapshot_123");
 });
 
-test("updateRebilling uses the confirmed v3 endpoint and locationIds payload", async () => {
+test("updateRebilling enables every supported rebilling product", async () => {
   const calls = [];
   const client = new GhlClient({
     token: "token",
@@ -51,8 +51,11 @@ test("updateRebilling uses the confirmed v3 endpoint and locationIds payload", a
 
   await client.updateRebilling("loc_123");
 
+  assert.equal(calls.length, REBILLING_PRODUCTS.length);
   assert.equal(calls[0].url, "https://services.leadconnectorhq.com/saas/update-rebilling/company_123");
-  assert.deepEqual(calls[0].body, { locationIds: ["loc_123"], enableRebilling: true });
+  assert.deepEqual(calls.map((call) => call.body.product), REBILLING_PRODUCTS);
+  assert.deepEqual(calls[0].body.locationIds, ["loc_123"]);
+  assert.deepEqual(calls[0].body.config, { optIn: true, enabled: true, markup: 0 });
 });
 
 test("enableSaas sends the selected SaaS plan and price", async () => {
@@ -102,4 +105,50 @@ test("request failures throw instead of being silently ignored", async () => {
       }),
     /No se pudo crear el usuario administrador/,
   );
+});
+
+test("upsertAdminUser attaches an existing user when GHL rejects duplicate email", async () => {
+  const calls = [];
+  const client = new GhlClient({
+    token: "token",
+    companyId: "company_123",
+    stripeAccountId: "acct_123",
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), method: init.method, body: init.body ? JSON.parse(init.body) : null });
+
+      if (String(url) === "https://services.leadconnectorhq.com/users/") {
+        return new Response(JSON.stringify({ message: "A user with this email already exists." }), { status: 400 });
+      }
+
+      if (String(url).startsWith("https://services.leadconnectorhq.com/users/search")) {
+        return jsonResponse({
+          users: [
+            {
+              id: "user_123",
+              email: "cliente@example.com",
+              firstName: "Cliente",
+              lastName: "Uno",
+              locationIds: ["loc_old"],
+            },
+          ],
+        });
+      }
+
+      return jsonResponse({ success: true });
+    },
+  });
+
+  await client.upsertAdminUser({
+    firstName: "Cliente",
+    lastName: "Uno",
+    email: "cliente@example.com",
+    phone: "+573001112233",
+    password: "Password123*",
+    locationIds: ["loc_new"],
+  });
+
+  const updateCall = calls.find((call) => call.url === "https://services.leadconnectorhq.com/users/user_123");
+  assert.equal(updateCall.method, "PUT");
+  assert.deepEqual(updateCall.body.locationIds, ["loc_old", "loc_new"]);
+  assert.equal(updateCall.body.role, "admin");
 });

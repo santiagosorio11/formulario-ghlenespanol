@@ -95,3 +95,27 @@ export function getSaasPriceIdForBillingInterval(
 
   return priceId;
 }
+
+export function validatePasswordPolicy(password: string) {
+  if (password.length < 10) {
+    return "La contrasena debe tener minimo 10 caracteres";
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return "La contrasena debe incluir al menos una mayuscula";
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return "La contrasena debe incluir al menos una minuscula";
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return "La contrasena debe incluir al menos un numero";
+  }
+
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return "La contrasena debe incluir al menos un caracter especial";
+  }
+
+  return null;
+}

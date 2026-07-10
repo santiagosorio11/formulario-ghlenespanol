@@ -119,7 +119,16 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
           </div>
           <div>
             <label style={labelStyle}>Contrasena de acceso *</label>
-            <input type="password" name="password" required className="glass-input" placeholder="Min. 8 caracteres" minLength={8} />
+            <input
+              type="password"
+              name="password"
+              required
+              className="glass-input"
+              placeholder="Min. 10, Aa, 1, *"
+              minLength={10}
+              pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}"
+              title="Minimo 10 caracteres, una mayuscula, una minuscula, un numero y un caracter especial"
+            />
           </div>
         </div>
 

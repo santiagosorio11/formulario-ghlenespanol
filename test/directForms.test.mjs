@@ -5,6 +5,7 @@ import {
   DIRECT_FORM_CONFIGS,
   getDirectFormConfig,
   getSaasPriceIdForBillingInterval,
+  validatePasswordPolicy,
 } from "../src/app/api/create-account/directForms.ts";
 
 test("direct form configs expose the three public form URLs", () => {
@@ -44,4 +45,13 @@ test("SaaS forms reject missing billing interval", () => {
   const config = getDirectFormConfig("impulso-digital-anual");
 
   assert.throws(() => getSaasPriceIdForBillingInterval(config, ""), /Selecciona si el cobro sera mensual o anual/);
+});
+
+test("validatePasswordPolicy requires 10 chars with upper, lower, number and special", () => {
+  assert.equal(validatePasswordPolicy("Abcdefgh1*"), null);
+  assert.equal(validatePasswordPolicy("Abc1*"), "La contrasena debe tener minimo 10 caracteres");
+  assert.equal(validatePasswordPolicy("abcdefgh1*"), "La contrasena debe incluir al menos una mayuscula");
+  assert.equal(validatePasswordPolicy("ABCDEFGH1*"), "La contrasena debe incluir al menos una minuscula");
+  assert.equal(validatePasswordPolicy("Abcdefghij*"), "La contrasena debe incluir al menos un numero");
+  assert.equal(validatePasswordPolicy("Abcdefghi1"), "La contrasena debe incluir al menos un caracter especial");
 });
