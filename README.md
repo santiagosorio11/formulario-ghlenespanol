@@ -7,6 +7,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 El flujo se limita a crear la subcuenta con su snapshot, logo, informacion de la empresa y usuario administrador.
 
+## Destinos de redireccion de Bold
+
+- `/cuenta-anual-partners-ghl`
+- `/cuenta-multimarca-anual-ghl`
+- `/cuenta-partner-ghl-lifetime`
+- `/cuenta-ghl-premium-clientes`
+
+Cada ruta se resuelve dinamicamente desde `app/[formSlug]` y puede configurarse como URL de redireccion posterior al pago. Estas rutas no verifican por si solas que el pago de Bold haya sido aprobado.
+
 El `companyId` se puede confirmar con un token de agencia consultando `GET /locations/search?limit=1`: la respuesta de cada subcuenta incluye su propiedad `companyId`. Esta consulta es de solo lectura.
 
 ## Getting Started
