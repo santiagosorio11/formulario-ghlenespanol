@@ -2,20 +2,6 @@ type FetchImpl = typeof fetch;
 const RATE_LIMIT_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
 const DEFAULT_REQUEST_SPACING_MS = 350;
 
-export const REBILLING_PRODUCTS = [
-  "contentAI",
-  "workflow_premium_actions",
-  "workflow_ai",
-  "conversationAI",
-  "EmailNotification",
-  "whatsApp",
-  "reviewsAI",
-  "funnelAI",
-  "domainPurchase",
-  "Phone",
-  "Email",
-] as const;
-
 export const DEFAULT_ADMIN_SCOPES = [
   "campaigns.readonly",
   "campaigns.write",
@@ -275,7 +261,6 @@ function getAdminPermissions(existingPermissions?: Record<string, unknown>) {
 interface GhlClientOptions {
   token: string;
   companyId: string;
-  stripeAccountId?: string;
   fetchImpl?: FetchImpl;
   requestSpacingMs?: number;
 }
@@ -299,15 +284,6 @@ interface CreateUserInput {
   locationIds: string[];
 }
 
-interface EnableSaasInput {
-  locationId: string;
-  name: string;
-  email: string;
-  saasPlanId: string;
-  priceId: string;
-  isSaaSV2: boolean;
-}
-
 interface GhlUser {
   id: string;
   email?: string;
@@ -327,20 +303,17 @@ interface SearchUsersResponse {
 export class GhlClient {
   private readonly token: string;
   private readonly companyId: string;
-  private readonly stripeAccountId?: string;
   private readonly fetchImpl: FetchImpl;
   private readonly requestSpacingMs: number;
 
   constructor({
     token,
     companyId,
-    stripeAccountId,
     fetchImpl = fetch,
     requestSpacingMs = DEFAULT_REQUEST_SPACING_MS,
   }: GhlClientOptions) {
     this.token = token;
     this.companyId = companyId;
-    this.stripeAccountId = stripeAccountId;
     this.fetchImpl = fetchImpl;
     this.requestSpacingMs = Math.max(0, requestSpacingMs);
   }
@@ -425,52 +398,6 @@ export class GhlClient {
         phone: existingUser.phone ?? input.phone,
       },
       input.locationIds[0],
-    );
-  }
-
-  async updateRebilling(locationId: string) {
-    for (const product of REBILLING_PRODUCTS) {
-      await this.request(
-        `https://services.leadconnectorhq.com/saas/update-rebilling/${this.companyId}`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            locationIds: [locationId],
-            product,
-            config: {
-              optIn: true,
-              enabled: true,
-              markup: 0,
-            },
-          }),
-        },
-        `No se pudo activar la refacturacion de ${product} en GHL`,
-        [200, 201],
-      );
-    }
-  }
-
-  async enableSaas(input: EnableSaasInput) {
-    if (!this.stripeAccountId) {
-      throw new Error("Configuracion de Stripe faltante en el servidor");
-    }
-
-    await this.request(
-      `https://services.leadconnectorhq.com/saas/enable-saas/${input.locationId}`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          stripeAccountId: this.stripeAccountId,
-          name: input.name,
-          email: input.email,
-          companyId: this.companyId,
-          isSaaSV2: input.isSaaSV2,
-          providerLocationId: input.locationId,
-          saasPlanId: input.saasPlanId,
-          priceId: input.priceId,
-        }),
-      },
-      "No se pudo activar SaaS en la subcuenta",
     );
   }
 

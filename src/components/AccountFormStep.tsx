@@ -213,22 +213,6 @@ export default function AccountFormStep({ formConfig, onSuccess }: AccountFormSt
           </select>
         </div>
 
-        {formConfig.requiresBillingInterval && (
-          <div>
-            <label style={{ ...labelStyle, marginBottom: "0.5rem" }}>Tipo de cobro *</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem", padding: "0.875rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem" }}>
-                <input type="radio" name="billing_interval" value="month" required style={{ width: "1rem", height: "1rem" }} />
-                Mensual
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem", padding: "0.875rem", border: "1px solid #cbd5e1", borderRadius: "0.375rem" }}>
-                <input type="radio" name="billing_interval" value="year" required style={{ width: "1rem", height: "1rem" }} />
-                Anual
-              </label>
-            </div>
-          </div>
-        )}
-
         {formConfig.requiresPartnerEmail && (
           <div>
             <label style={labelStyle}>Email del partner *</label>

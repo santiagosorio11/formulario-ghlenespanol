@@ -1,5 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Configuracion de GHL
+
+1. Copia `.env.example` como `.env.local` y configura un token privado de agencia y su `GHL_COMPANY_ID`.
+2. Configura Cloudinary si quieres permitir que el formulario cargue el logo de la empresa.
+
+El flujo se limita a crear la subcuenta con su snapshot, logo, informacion de la empresa y usuario administrador.
+
+El `companyId` se puede confirmar con un token de agencia consultando `GET /locations/search?limit=1`: la respuesta de cada subcuenta incluye su propiedad `companyId`. Esta consulta es de solo lectura.
+
 ## Getting Started
 
 First, run the development server:

@@ -5,7 +5,6 @@ import {
   DEFAULT_ADMIN_PERMISSIONS,
   DEFAULT_ADMIN_SCOPES,
   GhlClient,
-  REBILLING_PRODUCTS,
 } from "../src/app/api/create-account/ghlClient.ts";
 
 function jsonResponse(body, status = 200) {
@@ -20,7 +19,6 @@ test("createLocation sends snapshotId with the sub-account payload", async () =>
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
-    stripeAccountId: "acct_123",
     requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
@@ -43,61 +41,10 @@ test("createLocation sends snapshotId with the sub-account payload", async () =>
   assert.equal(calls[0].body.snapshotId, "snapshot_123");
 });
 
-test("updateRebilling enables every supported rebilling product", async () => {
-  const calls = [];
-  const client = new GhlClient({
-    token: "token",
-    companyId: "company_123",
-    stripeAccountId: "acct_123",
-    requestSpacingMs: 0,
-    fetchImpl: async (url, init) => {
-      calls.push({ url: String(url), body: JSON.parse(init.body) });
-      return jsonResponse({ success: true }, 201);
-    },
-  });
-
-  await client.updateRebilling("loc_123");
-
-  assert.equal(calls.length, REBILLING_PRODUCTS.length);
-  assert.equal(calls[0].url, "https://services.leadconnectorhq.com/saas/update-rebilling/company_123");
-  assert.deepEqual(calls.map((call) => call.body.product), REBILLING_PRODUCTS);
-  assert.deepEqual(calls[0].body.locationIds, ["loc_123"]);
-  assert.deepEqual(calls[0].body.config, { optIn: true, enabled: true, markup: 0 });
-});
-
-test("enableSaas sends the selected SaaS plan and price", async () => {
-  const calls = [];
-  const client = new GhlClient({
-    token: "token",
-    companyId: "company_123",
-    stripeAccountId: "acct_123",
-    requestSpacingMs: 0,
-    fetchImpl: async (url, init) => {
-      calls.push({ url: String(url), body: JSON.parse(init.body) });
-      return jsonResponse({ success: true });
-    },
-  });
-
-  await client.enableSaas({
-    locationId: "loc_123",
-    name: "Cliente Uno",
-    email: "cliente@example.com",
-    saasPlanId: "plan_123",
-    priceId: "price_123",
-    isSaaSV2: false,
-  });
-
-  assert.equal(calls[0].url, "https://services.leadconnectorhq.com/saas/enable-saas/loc_123");
-  assert.equal(calls[0].body.stripeAccountId, "acct_123");
-  assert.equal(calls[0].body.saasPlanId, "plan_123");
-  assert.equal(calls[0].body.priceId, "price_123");
-});
-
 test("request failures throw instead of being silently ignored", async () => {
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
-    stripeAccountId: "acct_123",
     requestSpacingMs: 0,
     fetchImpl: async () => new Response("bad request", { status: 400 }),
   });
@@ -121,7 +68,6 @@ test("request retries when GHL returns rate limit", async () => {
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
-    stripeAccountId: "acct_123",
     requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
@@ -154,7 +100,6 @@ test("createUser sends admin payment permissions", async () => {
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
-    stripeAccountId: "acct_123",
     requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(init.body) });
@@ -187,7 +132,6 @@ test("upsertAdminUser attaches an existing user when GHL rejects duplicate email
   const client = new GhlClient({
     token: "token",
     companyId: "company_123",
-    stripeAccountId: "acct_123",
     requestSpacingMs: 0,
     fetchImpl: async (url, init) => {
       calls.push({ url: String(url), method: init.method, body: init.body ? JSON.parse(init.body) : null });

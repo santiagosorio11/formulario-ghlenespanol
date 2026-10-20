@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDirectFormConfig, getSaasPriceIdForBillingInterval, validatePasswordPolicy } from "./directForms";
+import { getDirectFormConfig, validatePasswordPolicy } from "./directForms";
 import { GhlClient } from "./ghlClient";
 
 export async function POST(req: Request) {
@@ -20,7 +20,6 @@ export async function POST(req: Request) {
     const nombreCuenta = getString(formData, "nombre_cuenta");
     const dominio = getString(formData, "dominio");
     const pais = getString(formData, "pais");
-    const billingInterval = getString(formData, "billing_interval");
     const partnerEmail = getString(formData, "partner_email");
     const password = getString(formData, "password");
     const logoEntry = formData.get("logo");
@@ -45,7 +44,6 @@ export async function POST(req: Request) {
       GHL_COMPANY_ID,
       CLOUDINARY_CLOUD_NAME,
       CLOUDINARY_UPLOAD_PRESET,
-      STRIPE_ACCOUNT_ID,
       GHL_REQUEST_SPACING_MS,
     } = process.env;
 
@@ -61,7 +59,6 @@ export async function POST(req: Request) {
     const ghlClient = new GhlClient({
       token: GHL_BEARER_TOKEN,
       companyId: GHL_COMPANY_ID,
-      stripeAccountId: STRIPE_ACCOUNT_ID,
       requestSpacingMs: parseOptionalNumber(GHL_REQUEST_SPACING_MS),
     });
     const locationId = await ghlClient.createLocation({
@@ -92,25 +89,6 @@ export async function POST(req: Request) {
 
       // Schedule partner update asynchronously so the API response does not wait for it.
       ghlClient.scheduleAddAdminLocationToExistingUser(partnerUser, locationId);
-    }
-
-    await ghlClient.updateRebilling(locationId);
-
-    if (formConfig.saasPlanId) {
-      const priceId = getSaasPriceIdForBillingInterval(formConfig, billingInterval);
-
-      if (!priceId) {
-        return NextResponse.json({ error: "No se encontro el precio SaaS para este formulario" }, { status: 400 });
-      }
-
-      await ghlClient.enableSaas({
-        locationId,
-        name: `${nombre} ${apellidos}`.trim(),
-        email,
-        saasPlanId: formConfig.saasPlanId,
-        priceId,
-        isSaaSV2: false,
-      });
     }
 
     return NextResponse.json({ success: true, locationId, logoUrl });
